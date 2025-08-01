@@ -59,8 +59,13 @@ async function getSingaporeWeather() {
                         const forecasts = weatherData.data.items[0].forecasts;
                         const timestamp = weatherData.data.items[0].timestamp;
                         
-                        // Get a sample of forecasts from different areas
-                        const sampleForecasts = forecasts.slice(0, 5).map(f => 
+                        // Get forecasts for key areas including AMK
+                        const keyAreas = ['Ang Mo Kio', 'City', 'Bedok', 'Jurong West', 'Woodlands'];
+                        const keyForecasts = forecasts.filter(f => keyAreas.includes(f.area));
+                        const otherForecasts = forecasts.filter(f => !keyAreas.includes(f.area)).slice(0, 3);
+                        
+                        const allForecasts = [...keyForecasts, ...otherForecasts];
+                        const sampleForecasts = allForecasts.map(f => 
                             `${f.area}: ${f.forecast}`
                         ).join(', ');
                         
@@ -95,7 +100,7 @@ async function getWeatherUncleResponse(userMessage, username) {
             const weatherData = await getSingaporeWeather();
             
             if (weatherData.success) {
-                contextualPrompt += `\n\nCURRENT SINGAPORE WEATHER DATA (${weatherData.timestamp}):\n${weatherData.summary}\n(Data covers ${weatherData.totalAreas} areas across Singapore)\n\nUse this real-time data in your response when relevant.`;
+                contextualPrompt += `\n\n🔴 IMPORTANT: REAL-TIME SINGAPORE WEATHER DATA (${weatherData.timestamp}):\n${weatherData.summary}\n(This covers ${weatherData.totalAreas} areas across Singapore)\n\nYOU MUST reference this actual current weather data in your response. Don't make up weather information - use the real data provided above. Mention specific areas and their current conditions from this data.`;
                 console.log('✅ Weather data fetched successfully');
                 console.log('📊 Weather Data Summary:', weatherData.summary);
                 console.log('🕐 Data Timestamp:', weatherData.timestamp);
