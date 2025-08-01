@@ -2,6 +2,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const OpenAI = require('openai');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 require('dotenv').config();
 
 // Bot configuration
@@ -41,15 +42,72 @@ function logMessage(chatId, username, message, response = null) {
     console.log('📝 Message Log:', JSON.stringify(logEntry, null, 2));
 }
 
+// Function to fetch Singapore weather data
+async function getSingaporeWeather() {
+    return new Promise((resolve, reject) => {
+        https.get('https://api-open.data.gov.sg/v2/real-time/api/two-hr-forecast', (res) => {
+            let data = '';
+            
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+            
+            res.on('end', () => {
+                try {
+                    const weatherData = JSON.parse(data);
+                    if (weatherData.code === 0 && weatherData.data) {
+                        const forecasts = weatherData.data.items[0].forecasts;
+                        const timestamp = weatherData.data.items[0].timestamp;
+                        
+                        // Get a sample of forecasts from different areas
+                        const sampleForecasts = forecasts.slice(0, 5).map(f => 
+                            `${f.area}: ${f.forecast}`
+                        ).join(', ');
+                        
+                        resolve({
+                            success: true,
+                            timestamp: new Date(timestamp).toLocaleString('en-SG'),
+                            summary: sampleForecasts,
+                            totalAreas: forecasts.length
+                        });
+                    } else {
+                        resolve({ success: false, error: 'Invalid data format' });
+                    }
+                } catch (error) {
+                    resolve({ success: false, error: 'Failed to parse weather data' });
+                }
+            });
+        }).on('error', (error) => {
+            resolve({ success: false, error: error.message });
+        });
+    });
+}
+
 // Function to get Weather Uncle's response
 async function getWeatherUncleResponse(userMessage, username) {
     try {
+        // Check if user is asking about Singapore weather
+        const isWeatherQuery = /singapore|weather|forecast|rain|sunny|cloudy|temperature|humid/i.test(userMessage);
+        let contextualPrompt = weatherUnclePrompt;
+        
+        if (isWeatherQuery) {
+            console.log('🌤️ Fetching Singapore weather data...');
+            const weatherData = await getSingaporeWeather();
+            
+            if (weatherData.success) {
+                contextualPrompt += `\n\nCURRENT SINGAPORE WEATHER DATA (${weatherData.timestamp}):\n${weatherData.summary}\n(Data covers ${weatherData.totalAreas} areas across Singapore)\n\nUse this real-time data in your response when relevant.`;
+                console.log('✅ Weather data fetched successfully');
+            } else {
+                console.log('⚠️ Weather data fetch failed:', weatherData.error);
+            }
+        }
+
         const response = await openai.chat.completions.create({
             model: "openai/gpt-4o",
             messages: [
                 {
                     role: "system",
-                    content: weatherUnclePrompt
+                    content: contextualPrompt
                 },
                 {
                     role: "user",
@@ -62,7 +120,7 @@ async function getWeatherUncleResponse(userMessage, username) {
 
         return response.choices[0].message.content;
     } catch (error) {
-        console.error('❌ OpenAI API Error:', error.message);
+        console.error('❌ OpenRouter API Error:', error.message);
         
         if (error.code === 'insufficient_quota') {
             return "🤔 Weather Uncle is taking a short break due to API quota limits. Please try again later!";

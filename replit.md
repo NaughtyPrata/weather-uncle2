@@ -2,7 +2,7 @@
 
 ## Overview
 
-Weather Uncle Bot is a personality-driven Telegram chatbot that embodies an enthusiastic weather expert character. The bot leverages OpenAI's GPT-4o model to provide engaging conversations about meteorology, weather patterns, and climate science. Unlike typical weather bots that simply provide forecasts, Weather Uncle creates an interactive experience by combining weather knowledge with a warm, storytelling personality that makes meteorology accessible and entertaining for users.
+Weather Uncle Bot is a personality-driven Telegram chatbot that embodies an enthusiastic weather expert character. The bot leverages OpenAI's GPT-4o model via OpenRouter to provide engaging conversations about meteorology, weather patterns, and climate science. The bot features real-time Singapore weather data integration from Singapore's government API, automatically fetching current forecasts when users ask weather-related questions. Unlike typical weather bots that simply provide forecasts, Weather Uncle creates an interactive experience by combining real weather data with a warm, storytelling personality that makes meteorology accessible and entertaining for users.
 
 ## User Preferences
 
@@ -26,7 +26,9 @@ Preferred communication style: Simple, everyday language.
 
 **Telegram Bot API**: Primary interface for receiving and sending messages through the `node-telegram-bot-api` library using polling mode (no webhook infrastructure required).
 
-**OpenAI GPT-4o**: Core conversational AI engine that processes user messages and generates Weather Uncle's responses based on the character prompt system.
+**OpenRouter API**: Gateway service providing access to OpenAI GPT-4o and other AI models, replacing direct OpenAI integration to avoid quota limitations and provide better availability.
+
+**Singapore Weather API**: Real-time weather data from `api-open.data.gov.sg/v2/real-time/api/two-hr-forecast` providing current 2-hour forecasts across Singapore regions. Data is automatically fetched when users ask weather-related questions.
 
 **File System**: Local file system dependency for loading the character prompt from `prompt.md`, enabling dynamic personality updates without application restarts.
 
