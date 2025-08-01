@@ -94,10 +94,11 @@ async function getWeatherUncleResponse(userMessage, username) {
         // Check if user is asking about Singapore weather
         const isWeatherQuery = /singapore|weather|forecast|rain|sunny|cloudy|temperature|humid/i.test(userMessage);
         let contextualPrompt = weatherUnclePrompt;
+        let weatherData = null;
         
         if (isWeatherQuery) {
             console.log('🌤️ Fetching Singapore weather data...');
-            const weatherData = await getSingaporeWeather();
+            weatherData = await getSingaporeWeather();
             
             if (weatherData.success) {
                 contextualPrompt += `\n\n🔴 IMPORTANT: REAL-TIME SINGAPORE WEATHER DATA (${weatherData.timestamp}):\n${weatherData.summary}\n(This covers ${weatherData.totalAreas} areas across Singapore)\n\nYOU MUST reference this actual current weather data in your response. Don't make up weather information - use the real data provided above. Mention specific areas and their current conditions from this data.`;
@@ -125,7 +126,14 @@ async function getWeatherUncleResponse(userMessage, username) {
             temperature: 0.8
         });
 
-        return response.choices[0].message.content;
+        let finalResponse = response.choices[0].message.content;
+        
+        // Add API proof footer for weather queries
+        if (isWeatherQuery && weatherData && weatherData.success) {
+            finalResponse += `\n\n📡 *Weather insights powered by Singapore Government API (${weatherData.timestamp})*`;
+        }
+
+        return finalResponse;
     } catch (error) {
         console.error('❌ OpenRouter API Error:', error.message);
         
