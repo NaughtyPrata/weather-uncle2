@@ -42,50 +42,94 @@ function logMessage(chatId, username, message, response = null) {
     console.log('📝 Message Log:', JSON.stringify(logEntry, null, 2));
 }
 
-// Function to fetch Singapore weather data
+// Function to fetch comprehensive Singapore weather data
 async function getSingaporeWeather() {
-    return new Promise((resolve, reject) => {
-        https.get('https://api-open.data.gov.sg/v2/real-time/api/two-hr-forecast', (res) => {
-            let data = '';
-            
-            res.on('data', (chunk) => {
-                data += chunk;
-            });
-            
-            res.on('end', () => {
-                try {
-                    const weatherData = JSON.parse(data);
-                    if (weatherData.code === 0 && weatherData.data) {
-                        const forecasts = weatherData.data.items[0].forecasts;
-                        const timestamp = weatherData.data.items[0].timestamp;
-                        
-                        // Get forecasts for key areas including AMK
-                        const keyAreas = ['Ang Mo Kio', 'City', 'Bedok', 'Jurong West', 'Woodlands'];
-                        const keyForecasts = forecasts.filter(f => keyAreas.includes(f.area));
-                        const otherForecasts = forecasts.filter(f => !keyAreas.includes(f.area)).slice(0, 3);
-                        
-                        const allForecasts = [...keyForecasts, ...otherForecasts];
-                        const sampleForecasts = allForecasts.map(f => 
-                            `${f.area}: ${f.forecast}`
-                        ).join(', ');
-                        
-                        resolve({
-                            success: true,
-                            timestamp: new Date(timestamp).toLocaleString('en-SG'),
-                            summary: sampleForecasts,
-                            totalAreas: forecasts.length
-                        });
-                    } else {
-                        resolve({ success: false, error: 'Invalid data format' });
+    const fetchData = (url) => {
+        return new Promise((resolve) => {
+            https.get(url, (res) => {
+                let data = '';
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => {
+                    try {
+                        resolve(JSON.parse(data));
+                    } catch (error) {
+                        resolve({ code: -1, error: 'Parse error' });
                     }
-                } catch (error) {
-                    resolve({ success: false, error: 'Failed to parse weather data' });
-                }
+                });
+            }).on('error', () => {
+                resolve({ code: -1, error: 'Network error' });
             });
-        }).on('error', (error) => {
-            resolve({ success: false, error: error.message });
         });
-    });
+    };
+
+    // Fetch all weather data types
+    const [forecastData, tempData, humidityData, windData] = await Promise.all([
+        fetchData('https://api-open.data.gov.sg/v2/real-time/api/two-hr-forecast'),
+        fetchData('https://api-open.data.gov.sg/v2/real-time/api/air-temperature'),
+        fetchData('https://api-open.data.gov.sg/v2/real-time/api/relative-humidity'),
+        fetchData('https://api-open.data.gov.sg/v2/real-time/api/wind-speed')
+    ]);
+
+    try {
+        let summary = '';
+        let timestamp = '';
+
+        // Process forecast data
+        if (forecastData.code === 0 && forecastData.data) {
+            const forecasts = forecastData.data.items[0].forecasts;
+            timestamp = new Date(forecastData.data.items[0].timestamp).toLocaleString('en-SG');
+            
+            const keyAreas = ['Ang Mo Kio', 'City', 'Bedok', 'Jurong West', 'Woodlands'];
+            const keyForecasts = forecasts.filter(f => keyAreas.includes(f.area));
+            const otherForecasts = forecasts.filter(f => !keyAreas.includes(f.area)).slice(0, 3);
+            const allForecasts = [...keyForecasts, ...otherForecasts];
+            
+            summary += 'FORECAST: ' + allForecasts.map(f => `${f.area}: ${f.forecast}`).join(', ');
+        }
+
+        // Process temperature data
+        if (tempData.code === 0 && tempData.data?.stations) {
+            const tempReadings = tempData.data.stations
+                .filter(s => s.reading !== undefined)
+                .slice(0, 5)
+                .map(s => `${s.name}: ${s.reading}°C`);
+            if (tempReadings.length > 0) {
+                summary += ' | TEMPERATURE: ' + tempReadings.join(', ');
+            }
+        }
+
+        // Process humidity data
+        if (humidityData.code === 0 && humidityData.data?.stations) {
+            const humidityReadings = humidityData.data.stations
+                .filter(s => s.reading !== undefined)
+                .slice(0, 3)
+                .map(s => `${s.name}: ${s.reading}%`);
+            if (humidityReadings.length > 0) {
+                summary += ' | HUMIDITY: ' + humidityReadings.join(', ');
+            }
+        }
+
+        // Process wind data
+        if (windData.code === 0 && windData.data?.stations) {
+            const windReadings = windData.data.stations
+                .filter(s => s.reading !== undefined)
+                .slice(0, 3)
+                .map(s => `${s.name}: ${s.reading} km/h`);
+            if (windReadings.length > 0) {
+                summary += ' | WIND: ' + windReadings.join(', ');
+            }
+        }
+
+        return {
+            success: true,
+            timestamp: timestamp,
+            summary: summary,
+            totalAreas: forecastData.data?.items?.[0]?.forecasts?.length || 0
+        };
+
+    } catch (error) {
+        return { success: false, error: 'Failed to process weather data' };
+    }
 }
 
 // Function to get Weather Uncle's response
