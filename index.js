@@ -6,11 +6,14 @@ require('dotenv').config();
 
 // Bot configuration
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '7594601856:AAGVN4fm7YoCiMofOY-VUX-iKqcNrt-oFz4';
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
-// Initialize OpenAI client
+// Initialize OpenAI client with OpenRouter
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+const openai = new OpenAI({ 
+    apiKey: OPENROUTER_API_KEY,
+    baseURL: "https://openrouter.ai/api/v1"
+});
 
 // Initialize Telegram bot
 const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
@@ -42,7 +45,7 @@ function logMessage(chatId, username, message, response = null) {
 async function getWeatherUncleResponse(userMessage, username) {
     try {
         const response = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "openai/gpt-4o",
             messages: [
                 {
                     role: "system",
@@ -126,7 +129,7 @@ bot.on('polling_error', (error) => {
 // Startup message
 console.log('🤖 Weather Uncle Bot is starting up...');
 console.log('🔑 Telegram Token:', TELEGRAM_TOKEN ? 'Configured' : 'Missing');
-console.log('🔑 OpenAI API Key:', OPENAI_API_KEY ? 'Configured' : 'Missing');
+console.log('🔑 OpenRouter API Key:', OPENROUTER_API_KEY ? 'Configured' : 'Missing');
 
 // Graceful shutdown
 process.on('SIGINT', () => {
