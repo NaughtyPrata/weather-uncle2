@@ -97,6 +97,8 @@ async function getWeatherUncleResponse(userMessage, username) {
             if (weatherData.success) {
                 contextualPrompt += `\n\nCURRENT SINGAPORE WEATHER DATA (${weatherData.timestamp}):\n${weatherData.summary}\n(Data covers ${weatherData.totalAreas} areas across Singapore)\n\nUse this real-time data in your response when relevant.`;
                 console.log('✅ Weather data fetched successfully');
+                console.log('📊 Weather Data Summary:', weatherData.summary);
+                console.log('🕐 Data Timestamp:', weatherData.timestamp);
             } else {
                 console.log('⚠️ Weather data fetch failed:', weatherData.error);
             }
