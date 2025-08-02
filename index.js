@@ -42,27 +42,36 @@ function logMessage(chatId, username, message, response = null) {
     console.log('📝 Message Log:', JSON.stringify(logEntry, null, 2));
 }
 
-// Function to fetch comprehensive Singapore weather data
-async function getSingaporeWeather() {
-    const fetchData = (url) => {
-        return new Promise((resolve) => {
-            https.get(url, (res) => {
-                let data = '';
-                res.on('data', (chunk) => { data += chunk; });
-                res.on('end', () => {
-                    try {
-                        resolve(JSON.parse(data));
-                    } catch (error) {
-                        resolve({ code: -1, error: 'Parse error' });
-                    }
-                });
-            }).on('error', () => {
-                resolve({ code: -1, error: 'Network error' });
-            });
-        });
-    };
+// Templated footer generator
+function createAPIFooter(apiName, timestamp, dataSource) {
+    return `\n\n📡 *${apiName} insights powered by ${dataSource} (${timestamp})*`;
+}
 
-    // Fetch all weather data types
+// Generic data fetcher
+const fetchData = (url) => {
+    return new Promise((resolve) => {
+        https.get(url, (res) => {
+            let data = '';
+            res.on('data', (chunk) => { data += chunk; });
+            res.on('end', () => {
+                try {
+                    resolve(JSON.parse(data));
+                } catch (error) {
+                    resolve({ code: -1, error: 'Parse error' });
+                }
+            });
+        }).on('error', () => {
+            resolve({ code: -1, error: 'Network error' });
+        });
+    });
+};
+
+// MODULAR API TOOLS
+
+// Weather API Tool
+async function getWeatherData() {
+    console.log('🌤️ Fetching Singapore weather data...');
+    
     const [forecastData, tempData, humidityData, windData] = await Promise.all([
         fetchData('https://api-open.data.gov.sg/v2/real-time/api/two-hr-forecast'),
         fetchData('https://api-open.data.gov.sg/v2/real-time/api/air-temperature'),
@@ -120,37 +129,108 @@ async function getSingaporeWeather() {
             }
         }
 
+        console.log('✅ Weather data fetched successfully');
+        console.log(`📊 Weather Data Summary: ${summary.substring(0, 200)}...`);
+        console.log(`🕐 Data Timestamp: ${timestamp}`);
+
         return {
             success: true,
             timestamp: timestamp,
             summary: summary,
-            totalAreas: forecastData.data?.items?.[0]?.forecasts?.length || 0
+            totalAreas: forecastData.data?.items?.[0]?.forecasts?.length || 0,
+            footer: createAPIFooter('Weather', timestamp, 'Singapore Government APIs')
         };
 
     } catch (error) {
+        console.error('❌ Failed to fetch weather data:', error.message);
         return { success: false, error: 'Failed to process weather data' };
     }
+}
+
+// Traffic Camera API Tool
+async function getTrafficData() {
+    console.log('🚗 Fetching Singapore traffic camera data...');
+    
+    const trafficData = await fetchData('https://api.data.gov.sg/v1/transport/traffic-images');
+    
+    try {
+        if (trafficData.items && trafficData.items.length > 0) {
+            const cameras = trafficData.items[0].cameras;
+            const timestamp = new Date(trafficData.items[0].timestamp).toLocaleString('en-SG');
+            
+            // Get sample of traffic cameras from different areas
+            const sampleCameras = cameras.slice(0, 8).map(cam => ({
+                id: cam.camera_id,
+                image: cam.image,
+                location: `${cam.location.latitude.toFixed(4)}, ${cam.location.longitude.toFixed(4)}`,
+                imageTime: new Date(cam.timestamp).toLocaleString('en-SG')
+            }));
+            
+            let summary = `TRAFFIC CAMERAS (${cameras.length} total): `;
+            summary += sampleCameras.map(cam => 
+                `Camera ${cam.id} (${cam.location}) - Image: ${cam.image}`
+            ).join(' | ');
+            
+            console.log('✅ Traffic data fetched successfully');
+            console.log(`📊 Traffic Data Summary: ${cameras.length} cameras available`);
+            console.log(`🕐 Data Timestamp: ${timestamp}`);
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                summary: summary,
+                cameras: sampleCameras,
+                totalCameras: cameras.length,
+                footer: createAPIFooter('Traffic', timestamp, 'Singapore Government Traffic APIs')
+            };
+        } else {
+            throw new Error('No traffic data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch traffic data:', error.message);
+        return { success: false, error: 'Failed to process traffic data' };
+    }
+}
+
+// Legacy wrapper for backward compatibility
+async function getSingaporeWeather() {
+    return await getWeatherData();
 }
 
 // Function to get Weather Uncle's response
 async function getWeatherUncleResponse(userMessage, username) {
     try {
-        // Check if user is asking about Singapore weather
+        // Detect what type of data user is asking for
         const isWeatherQuery = /singapore|weather|forecast|rain|sunny|cloudy|temperature|humid/i.test(userMessage);
-        let contextualPrompt = weatherUnclePrompt;
-        let weatherData = null;
+        const isTrafficQuery = /traffic|camera|road|jam|congestion|drive|highway|expressway|amk|bishan|orchard/i.test(userMessage);
         
+        let contextualPrompt = weatherUnclePrompt;
+        let apiData = [];
+        let apiFooters = [];
+        
+        // Fetch weather data if needed
         if (isWeatherQuery) {
-            console.log('🌤️ Fetching Singapore weather data...');
-            weatherData = await getSingaporeWeather();
+            const weatherData = await getWeatherData();
             
             if (weatherData.success) {
-                contextualPrompt += `\n\n🔴 IMPORTANT: REAL-TIME SINGAPORE WEATHER DATA (${weatherData.timestamp}):\n${weatherData.summary}\n(This covers ${weatherData.totalAreas} areas across Singapore)\n\nYOU MUST reference this actual current weather data in your response. Don't make up weather information - use the real data provided above. Mention specific areas and their current conditions from this data.`;
-                console.log('✅ Weather data fetched successfully');
-                console.log('📊 Weather Data Summary:', weatherData.summary);
-                console.log('🕐 Data Timestamp:', weatherData.timestamp);
+                contextualPrompt += `\n\n🔴 REAL-TIME SINGAPORE WEATHER DATA (${weatherData.timestamp}):\n${weatherData.summary}\n(This covers ${weatherData.totalAreas} areas across Singapore)\n\nYOU MUST reference this actual current weather data in your response. Don't make up weather information - use the real data provided above. Mention specific areas and their current conditions from this data.`;
+                apiFooters.push(weatherData.footer);
+                apiData.push('weather');
             } else {
                 console.log('⚠️ Weather data fetch failed:', weatherData.error);
+            }
+        }
+        
+        // Fetch traffic data if needed
+        if (isTrafficQuery) {
+            const trafficData = await getTrafficData();
+            
+            if (trafficData.success) {
+                contextualPrompt += `\n\n🔴 REAL-TIME SINGAPORE TRAFFIC CAMERA DATA (${trafficData.timestamp}):\n${trafficData.summary}\n(${trafficData.totalCameras} cameras available across Singapore)\n\nYOU MUST reference this actual current traffic camera data in your response. You can mention specific camera locations and that real-time traffic images are available from these government cameras. The cameras show current road conditions across Singapore. Each camera provides live images updated every few minutes.`;
+                apiFooters.push(trafficData.footer);
+                apiData.push('traffic');
+            } else {
+                console.log('⚠️ Traffic data fetch failed:', trafficData.error);
             }
         }
 
@@ -172,9 +252,9 @@ async function getWeatherUncleResponse(userMessage, username) {
 
         let finalResponse = response.choices[0].message.content;
         
-        // Add API proof footer for weather queries
-        if (isWeatherQuery && weatherData && weatherData.success) {
-            finalResponse += `\n\n📡 *Weather insights powered by Singapore Government API (${weatherData.timestamp})*`;
+        // Add API proof footers
+        if (apiFooters.length > 0) {
+            finalResponse += apiFooters.join('');
         }
 
         return finalResponse;

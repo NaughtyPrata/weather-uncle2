@@ -28,7 +28,12 @@ Preferred communication style: Simple, everyday language.
 
 **OpenRouter API**: Gateway service providing access to OpenAI GPT-4o and other AI models, replacing direct OpenAI integration to avoid quota limitations and provide better availability.
 
-**Singapore Weather API**: Real-time weather data from `api-open.data.gov.sg/v2/real-time/api/two-hr-forecast` providing current 2-hour forecasts across Singapore regions. Data is automatically fetched when users ask weather-related questions.
+**Singapore Government APIs**: Modular API integration system including:
+- Weather forecasts from `api-open.data.gov.sg/v2/real-time/api/two-hr-forecast`
+- Temperature readings from `api-open.data.gov.sg/v2/real-time/api/air-temperature`
+- Humidity data from `api-open.data.gov.sg/v2/real-time/api/relative-humidity`
+- Wind speed from `api-open.data.gov.sg/v2/real-time/api/wind-speed`
+- Traffic camera images from `api.data.gov.sg/v1/transport/traffic-images`
 
 **File System**: Local file system dependency for loading the character prompt from `prompt.md`, enabling dynamic personality updates without application restarts.
 
