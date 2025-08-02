@@ -47,6 +47,325 @@ function createAPIFooter(apiName, timestamp, dataSource) {
     return `\n\n📡 *${apiName} insights powered by ${dataSource} (${timestamp})*`;
 }
 
+// Helper function to create comprehensive API footer
+function createComprehensiveAPIFooter(apiList, timestamp) {
+    if (apiList.length === 0) return '';
+    
+    const uniqueAPIs = [...new Set(apiList)]; // Remove duplicates
+    const plural = uniqueAPIs.length > 1 ? 'APIs' : 'API';
+    
+    return `\n\n📊 *Live data from ${uniqueAPIs.length} Singapore Government ${plural}: ${uniqueAPIs.join(', ')} (${timestamp})*`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TELEGRAM UI CARD SYSTEM
+// ═══════════════════════════════════════════════════════════════════
+
+// Weather UI Card Components
+function createWeatherCard(weatherData, analysisData = null) {
+    const timestamp = new Date().toLocaleString('en-SG');
+    
+    let card = `🌤️ *SINGAPORE WEATHER DASHBOARD*\n`;
+    card += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    card += `📅 ${timestamp}\n\n`;
+    
+    // Current Conditions Section
+    if (weatherData && weatherData.success) {
+        card += `🌡️ *CURRENT CONDITIONS*\n`;
+        card += `├ Temperature: ${weatherData.temperature || 'N/A'}°C\n`;
+        card += `├ Humidity: ${weatherData.humidity || 'N/A'}%\n`;
+        card += `├ Wind: ${weatherData.windSpeed || 'N/A'} km/h\n`;
+        card += `└ Rainfall: ${weatherData.rainfall || 0}mm\n\n`;
+    }
+    
+    return card;
+}
+
+function createAirQualityCard(psi, pm25, uvIndex) {
+    let card = `🌫️ *AIR QUALITY INDEX*\n`;
+    card += `├ PSI: ${psi || 'N/A'} ${getPSIStatus(psi)}\n`;
+    card += `├ PM2.5: ${pm25 || 'N/A'} μg/m³\n`;
+    card += `└ UV Index: ${uvIndex || 'N/A'} ${getUVStatus(uvIndex)}\n\n`;
+    
+    return card;
+}
+
+function createForecastCard(forecast2h, forecast24h) {
+    let card = `🔮 *WEATHER FORECAST*\n`;
+    if (forecast2h) {
+        card += `├ Next 2 Hours: ${forecast2h}\n`;
+    }
+    if (forecast24h) {
+        card += `└ Next 24 Hours: ${forecast24h}\n`;
+    }
+    card += `\n`;
+    
+    return card;
+}
+
+function createSafetyCard(analysisData) {
+    if (!analysisData) return '';
+    
+    let card = `🛡️ *SAFETY ANALYSIS*\n`;
+    
+    if (analysisData.type === 'jogging') {
+        const status = analysisData.safe ? '✅ SAFE' : '❌ UNSAFE';
+        card += `🏃 Jogging: ${status}\n`;
+        if (!analysisData.safe) {
+            card += `⚠️ Reasons: ${analysisData.reasons.join(', ')}\n`;
+        }
+    } else if (analysisData.type === 'outdoor') {
+        const status = analysisData.safe ? '✅ SAFE' : '❌ UNSAFE';
+        card += `🚴 Outdoor Activities: ${status}\n`;
+        if (!analysisData.safe) {
+            card += `⚠️ Warnings: ${analysisData.warnings.join(', ')}\n`;
+        }
+    }
+    
+    card += `\n`;
+    return card;
+}
+
+function createInteractiveKeyboard() {
+    return {
+        inline_keyboard: [
+            [
+                { text: '🏃 Jogging Safety', callback_data: 'check_jogging' },
+                { text: '👶 Child Play', callback_data: 'check_children' }
+            ],
+            [
+                { text: '👕 Laundry Time', callback_data: 'check_laundry' },
+                { text: '🧺 Picnic Plans', callback_data: 'check_picnic' }
+            ],
+            [
+                { text: '🌧️ Rain Forecast', callback_data: 'check_rain' },
+                { text: '🌫️ Haze Risk', callback_data: 'check_haze' }
+            ],
+            [
+                { text: '🔄 Refresh Data', callback_data: 'refresh_weather' },
+                { text: '📊 Full Report', callback_data: 'full_analysis' }
+            ]
+        ]
+    };
+}
+
+// Status helper functions
+function getPSIStatus(psi) {
+    if (!psi) return '';
+    if (psi <= 50) return '🟢 Good';
+    if (psi <= 100) return '🟡 Moderate';
+    if (psi <= 200) return '🟠 Unhealthy';
+    return '🔴 Hazardous';
+}
+
+function getUVStatus(uv) {
+    if (!uv) return '';
+    if (uv <= 2) return '🟢 Low';
+    if (uv <= 5) return '🟡 Moderate';
+    if (uv <= 7) return '🟠 High';
+    if (uv <= 10) return '🔴 Very High';
+    return '🟣 Extreme';
+}
+
+function createComprehensiveWeatherCard(allData) {
+    const timestamp = new Date().toLocaleString('en-SG');
+    
+    let card = `🌤️ *SINGAPORE WEATHER DASHBOARD*\n`;
+    card += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    card += `📅 ${timestamp}\n\n`;
+    
+    // Environmental Data
+    card += `🌡️ *ENVIRONMENTAL CONDITIONS*\n`;
+    card += `├ Temperature: ${allData.temperature || 'N/A'}°C\n`;
+    card += `├ Humidity: ${allData.humidity || 'N/A'}%\n`;
+    card += `├ Wind Speed: ${allData.windSpeed || 'N/A'} km/h\n`;
+    card += `└ Rainfall: ${allData.rainfall || 0}mm\n\n`;
+    
+    // Air Quality
+    card += createAirQualityCard(allData.psi, allData.pm25, allData.uvIndex);
+    
+    // Forecasts
+    if (allData.forecast2h || allData.forecast24h) {
+        card += createForecastCard(allData.forecast2h, allData.forecast24h);
+    }
+    
+    // Quick Safety Summary
+    card += `🛡️ *QUICK SAFETY CHECK*\n`;
+    card += `├ Outdoor Safety: ${allData.psi > 100 || allData.uvIndex > 8 || allData.rainfall > 5 ? '❌ Use Caution' : '✅ Safe'}\n`;
+    card += `├ Air Quality: ${allData.psi > 100 ? '❌ Poor' : '✅ Good'}\n`;
+    card += `└ UV Protection: ${allData.uvIndex > 7 ? '❌ Required' : '✅ Optional'}\n\n`;
+    
+    return card;
+}
+
+// Weather Dashboard Generator
+async function generateWeatherDashboard(chatId, messageId = null) {
+    try {
+        console.log('📊 Fetching comprehensive weather data for dashboard...');
+        
+        // Fetch all necessary data
+        const [psiData, uvData, rainfallData, humidityData, windData, tempData, forecast2hData, forecast24hData] = await Promise.all([
+            getPSIData(),
+            getUVIndexData(),
+            getRainfallData(),
+            getHumidityData(),
+            getWindSpeedData(),
+            getTemperatureData(),
+            get2HourForecastData(),
+            get24HourForecastData()
+        ]);
+        
+        // Compile all data
+        const allData = {
+            psi: psiData.success ? Math.max(...(psiData.readings?.map(r => r.value) || [0])) : null,
+            uvIndex: uvData.success ? Math.max(...(uvData.readings?.map(r => r.value) || [0])) : null,
+            rainfall: rainfallData.success ? Math.max(...(rainfallData.readings?.map(r => r.value) || [0])) : null,
+            humidity: humidityData.success ? Math.max(...(humidityData.readings?.map(r => r.value) || [0])) : null,
+            windSpeed: windData.success ? Math.max(...(windData.readings?.map(r => r.value) || [0])) : null,
+            temperature: tempData.success ? Math.max(...(tempData.readings?.map(r => r.value) || [0])) : null,
+            forecast2h: forecast2hData.success && forecast2hData.forecasts?.length > 0 ? 
+                forecast2hData.forecasts[0].forecast : null,
+            forecast24h: forecast24hData.success && forecast24hData.general?.forecast ? 
+                forecast24hData.general.forecast : null,
+            pm25: null // We can add PM2.5 if needed
+        };
+        
+        // Generate comprehensive weather card
+        const dashboardCard = createComprehensiveWeatherCard(allData);
+        
+        // Create interactive keyboard
+        const keyboard = createInteractiveKeyboard();
+        
+        // Track APIs used
+        const usedAPIs = ['PSI API', 'UV Index API', 'Rainfall API', 'Humidity API', 'Wind Speed API', 'Air Temperature API', '2-Hour Forecast API', '24-Hour Forecast API'];
+        const timestamp = new Date().toLocaleString('en-SG');
+        const footer = createComprehensiveAPIFooter(usedAPIs, timestamp);
+        
+        const fullMessage = dashboardCard + footer;
+        
+        // Send dashboard with interactive keyboard
+        await bot.sendMessage(chatId, fullMessage, {
+            parse_mode: 'Markdown',
+            reply_markup: keyboard,
+            reply_to_message_id: messageId
+        });
+        
+        console.log('✅ Weather dashboard sent successfully');
+        
+    } catch (error) {
+        console.error('❌ Error generating dashboard:', error.message);
+        await bot.sendMessage(chatId, '❌ Sorry, I encountered an error generating the weather dashboard. Please try again!', {
+            reply_to_message_id: messageId
+        });
+    }
+}
+
+// Handle callback queries from interactive buttons
+bot.on('callback_query', async (callbackQuery) => {
+    const chatId = callbackQuery.message.chat.id;
+    const data = callbackQuery.data;
+    const username = callbackQuery.from.username || callbackQuery.from.first_name;
+    
+    console.log(`🔘 Button pressed by @${username}: ${data}`);
+    
+    try {
+        await bot.answerCallbackQuery(callbackQuery.id);
+        await bot.sendChatAction(chatId, 'typing');
+        
+        let response = '';
+        
+        switch(data) {
+            case 'check_jogging':
+                const joggingData = await checkJoggingSafety();
+                if (joggingData.success) {
+                    response = `🏃 *JOGGING SAFETY ANALYSIS*\n\n${joggingData.safe ? '✅ SAFE TO JOG' : '❌ NOT SAFE TO JOG'}\n\n`;
+                    response += `📊 *Analysis:*\n${joggingData.reasons.join('\n')}\n\n`;
+                    response += `📈 *Current Data:*\nUV Index: ${joggingData.data.uvIndex}\nPSI: ${joggingData.data.psi}\nRainfall: ${joggingData.data.rainfall}mm`;
+                    response += createComprehensiveAPIFooter(joggingData.apis, new Date().toLocaleString('en-SG'));
+                }
+                break;
+                
+            case 'check_children':
+                const childData = await checkChildPlaySafety();
+                if (childData.success) {
+                    response = `👶 *CHILD PLAY SAFETY ANALYSIS*\n\n${childData.safe ? '✅ SAFE FOR CHILDREN' : '❌ NOT SAFE FOR CHILDREN'}\n\n`;
+                    response += `📊 *Analysis:*\n${childData.reasons.join('\n')}\n\n`;
+                    response += `📈 *Current Data:*\nUV Index: ${childData.data.uvIndex}\nPSI: ${childData.data.psi}`;
+                    response += createComprehensiveAPIFooter(childData.apis, new Date().toLocaleString('en-SG'));
+                }
+                break;
+                
+            case 'check_laundry':
+                const laundryData = await checkLaundryConditions();
+                if (laundryData.success) {
+                    response = `👕 *LAUNDRY CONDITIONS ANALYSIS*\n\n${laundryData.suitable ? '✅ GOOD FOR LAUNDRY' : '❌ NOT SUITABLE FOR LAUNDRY'}\n\n`;
+                    response += `📊 *Analysis:*\n${laundryData.reasons.join('\n')}\n\n`;
+                    response += `📈 *Current Data:*\nRainfall: ${laundryData.data.rainfall}mm\nHumidity: ${laundryData.data.humidity}%\nRain Forecast: ${laundryData.data.hasRainForecast ? 'Yes' : 'No'}`;
+                    response += createComprehensiveAPIFooter(laundryData.apis, new Date().toLocaleString('en-SG'));
+                }
+                break;
+                
+            case 'check_picnic':
+                const picnicData = await checkPicnicConditions();
+                if (picnicData.success) {
+                    response = `🧺 *PICNIC CONDITIONS ANALYSIS*\n\n${picnicData.suitable ? '✅ SUITABLE FOR PICNIC' : '❌ NOT SUITABLE FOR PICNIC'}\n\n`;
+                    response += `📊 *Risk Level:* ${picnicData.riskLevel}\n`;
+                    response += `🌧️ *Rain Signal Score:* ${picnicData.rainSignal}/3`;
+                    response += createComprehensiveAPIFooter(picnicData.apis, new Date().toLocaleString('en-SG'));
+                }
+                break;
+                
+            case 'check_rain':
+                const rainData = await predictRain();
+                if (rainData.success) {
+                    response = `🌧️ *RAIN PREDICTION ANALYSIS*\n\n📊 *${rainData.likelihood}*\n\n`;
+                    if (rainData.indicators.length > 0) {
+                        response += `⚠️ *Indicators:*\n${rainData.indicators.join('\n')}\n\n`;
+                    }
+                    response += `📈 *Current Data:*\nRainfall: ${rainData.data.rainfall}mm\nHumidity: ${rainData.data.humidity}%\n2h Forecast: ${rainData.data.rain2h || 'No rain'}\n24h Forecast: ${rainData.data.rain24h || 'No rain'}`;
+                    response += createComprehensiveAPIFooter(rainData.apis, new Date().toLocaleString('en-SG'));
+                }
+                break;
+                
+            case 'check_haze':
+                const hazeData = await checkHazeRisk();
+                if (hazeData.success) {
+                    response = `🌫️ *HAZE RISK ANALYSIS*\n\n📊 *${hazeData.risk}*\n\n`;
+                    response += `💡 *Explanation:* ${hazeData.explanation}\n\n`;
+                    response += `📈 *Current Data:*\nPSI: ${hazeData.data.psi}\nWind Speed: ${hazeData.data.windSpeed} km/h`;
+                    response += createComprehensiveAPIFooter(hazeData.apis, new Date().toLocaleString('en-SG'));
+                }
+                break;
+                
+            case 'refresh_weather':
+                await generateWeatherDashboard(chatId);
+                return;
+                
+            case 'full_analysis':
+                response = "🤖 *Full Analysis Available!*\n\nFor comprehensive analysis, ask me about:\n• Jogging safety\n• Child play conditions\n• Laundry timing\n• Picnic planning\n• Rain predictions\n• Haze risks\n• Outdoor activities\n• Comfort levels\n\nOr use the buttons above for quick checks!";
+                break;
+                
+            default:
+                response = "🤖 Weather Uncle is here to help! Use the buttons above for quick weather analysis.";
+        }
+        
+        if (response) {
+            await bot.sendMessage(chatId, response, {
+                parse_mode: 'Markdown'
+            });
+        }
+        
+        console.log(`✅ Callback handled for @${username}: ${data}`);
+        
+    } catch (error) {
+        console.error('❌ Error handling callback:', error.message);
+        await bot.answerCallbackQuery(callbackQuery.id, {
+            text: "❌ Error processing request. Please try again!",
+            show_alert: true
+        });
+    }
+});
+
 // Generic data fetcher
 const fetchData = (url) => {
     return new Promise((resolve) => {
@@ -580,6 +899,17 @@ bot.on('message', async (msg) => {
     try {
         // Show typing indicator
         await bot.sendChatAction(chatId, 'typing');
+
+        // Check for dashboard command
+        if (userMessage.toLowerCase().includes('/dashboard') || 
+            userMessage.toLowerCase().includes('show dashboard') ||
+            userMessage.toLowerCase().includes('weather dashboard') ||
+            userMessage.toLowerCase().includes('full report')) {
+            
+            console.log('🎛️ Generating weather dashboard UI card...');
+            await generateWeatherDashboard(chatId, msg.message_id);
+            return;
+        }
 
         // Get Weather Uncle's response
         const response = await getWeatherUncleResponse(userMessage, username);

@@ -38,3 +38,17 @@ Preferred communication style: Simple, everyday language.
 **File System**: Local file system dependency for loading the character prompt from `prompt.md`, enabling dynamic personality updates without application restarts.
 
 **Environment Configuration**: `.env` file support through the `dotenv` library for secure credential management and deployment flexibility.
+
+## UI Enhancement System
+
+**Telegram UI Card System**: Interactive dashboard interface providing structured weather data visualization within Telegram chat:
+- Professional weather dashboard with Unicode box-drawing characters for clean layout
+- Comprehensive environmental data display (temperature, humidity, wind, rainfall, air quality)
+- Color-coded status indicators using emoji for instant visual feedback (🟢 Good, 🟡 Moderate, 🔴 Hazardous)
+- Quick safety summary with outdoor safety, air quality, and UV protection assessments
+- Interactive keyboard with 8 quick-action buttons in 2x4 grid layout for mobile accessibility
+- Direct integration with all 10 analysis functions via callback handlers
+- Real-time data refresh capability and comprehensive report options
+- Triggered by commands: "/dashboard", "show dashboard", "weather dashboard", "full report"
+
+**Callback Query System**: Handles interactive button presses with immediate analysis responses, providing instant access to jogging safety, child play conditions, laundry timing, picnic planning, rain predictions, haze risks, and comprehensive data refresh capabilities.
