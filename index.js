@@ -16,16 +16,8 @@ const openai = new OpenAI({
     baseURL: "https://openrouter.ai/api/v1"
 });
 
-// Initialize Telegram bot with robust polling configuration
-const bot = new TelegramBot(TELEGRAM_TOKEN, { 
-    polling: {
-        interval: 1000,
-        autoStart: true,
-        params: {
-            timeout: 10
-        }
-    }
-});
+// Initialize Telegram bot
+const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
 
 // Load Weather Uncle character prompt
 let weatherUnclePrompt = '';
@@ -210,6 +202,7 @@ function createComprehensiveWeatherCard(allData) {
 async function generateWeatherDashboard(chatId, messageId = null) {
     try {
         console.log('📊 Fetching comprehensive weather data for dashboard...');
+        console.log('🔍 Starting API data collection for dashboard...');
         
         // Fetch all necessary data
         const [psiData, uvData, rainfallData, humidityData, windData, tempData, forecast2hData, forecast24hData] = await Promise.all([
@@ -914,7 +907,7 @@ bot.on('message', async (msg) => {
             userMessage.toLowerCase().includes('weather dashboard') ||
             userMessage.toLowerCase().includes('full report')) {
             
-            console.log('🎛️ Generating weather dashboard UI card...');
+            console.log('🎛️ Dashboard command detected! Generating weather dashboard UI card...');
             await generateWeatherDashboard(chatId, msg.message_id);
             return;
         }
