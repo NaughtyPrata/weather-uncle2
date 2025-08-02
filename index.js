@@ -16,8 +16,16 @@ const openai = new OpenAI({
     baseURL: "https://openrouter.ai/api/v1"
 });
 
-// Initialize Telegram bot
-const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
+// Initialize Telegram bot with robust polling configuration
+const bot = new TelegramBot(TELEGRAM_TOKEN, { 
+    polling: {
+        interval: 1000,
+        autoStart: true,
+        params: {
+            timeout: 10
+        }
+    }
+});
 
 // Load Weather Uncle character prompt
 let weatherUnclePrompt = '';
@@ -941,9 +949,20 @@ bot.on('error', (error) => {
     console.error('❌ Telegram Bot Error:', error.message);
 });
 
-// Handle polling errors
+// Handle polling errors with retry mechanism
 bot.on('polling_error', (error) => {
     console.error('❌ Polling Error:', error.message);
+    
+    if (error.code === 'ETELEGRAM' && error.message.includes('409 Conflict')) {
+        console.log('🔄 Detected polling conflict, attempting to restart...');
+        setTimeout(() => {
+            bot.stopPolling();
+            setTimeout(() => {
+                bot.startPolling();
+                console.log('🔄 Bot polling restarted');
+            }, 2000);
+        }, 1000);
+    }
 });
 
 // Startup message
@@ -951,17 +970,27 @@ console.log('🤖 Weather Uncle Bot is starting up...');
 console.log('🔑 Telegram Token:', TELEGRAM_TOKEN ? 'Configured' : 'Missing');
 console.log('🔑 OpenRouter API Key:', OPENROUTER_API_KEY ? 'Configured' : 'Missing');
 
-// Graceful shutdown
+// Graceful shutdown with cleanup
 process.on('SIGINT', () => {
     console.log('🛑 Shutting down Weather Uncle Bot...');
     bot.stopPolling();
-    process.exit(0);
+    setTimeout(() => process.exit(0), 1000);
 });
 
 process.on('SIGTERM', () => {
     console.log('🛑 Terminating Weather Uncle Bot...');
     bot.stopPolling();
-    process.exit(0);
+    setTimeout(() => process.exit(0), 1000);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('💥 Uncaught Exception:', error.message);
+    bot.stopPolling();
+    setTimeout(() => process.exit(1), 1000);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 console.log('✅ Weather Uncle Bot is now running and ready to chat about the weather! 🌤️');
