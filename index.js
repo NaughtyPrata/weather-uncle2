@@ -197,6 +197,299 @@ async function getSingaporeWeather() {
     return await getWeatherData();
 }
 
+// ADDITIONAL SINGAPORE GOVERNMENT API TOOLS (NOT INTEGRATED INTO CHATBOT YET)
+
+// PSI (Pollutant Standards Index) API Tool
+async function getPSIData() {
+    console.log('🏭 Fetching Singapore PSI data...');
+    
+    const psiData = await fetchData('https://api.data.gov.sg/v1/environment/psi');
+    
+    try {
+        if (psiData.items && psiData.items.length > 0) {
+            const readings = psiData.items[0].readings;
+            const timestamp = new Date(psiData.items[0].timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                readings: readings,
+                footer: createAPIFooter('PSI', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No PSI data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch PSI data:', error.message);
+        return { success: false, error: 'Failed to process PSI data' };
+    }
+}
+
+// PM2.5 API Tool
+async function getPM25Data() {
+    console.log('💨 Fetching Singapore PM2.5 data...');
+    
+    const pm25Data = await fetchData('https://api.data.gov.sg/v1/environment/pm25');
+    
+    try {
+        if (pm25Data.items && pm25Data.items.length > 0) {
+            const readings = pm25Data.items[0].readings;
+            const timestamp = new Date(pm25Data.items[0].timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                readings: readings,
+                footer: createAPIFooter('PM2.5', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No PM2.5 data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch PM2.5 data:', error.message);
+        return { success: false, error: 'Failed to process PM2.5 data' };
+    }
+}
+
+// Air Temperature (v1) API Tool
+async function getAirTemperatureV1Data() {
+    console.log('🌡️ Fetching Singapore Air Temperature (v1) data...');
+    
+    const tempData = await fetchData('https://api.data.gov.sg/v1/environment/air-temperature');
+    
+    try {
+        if (tempData.items && tempData.items.length > 0) {
+            const readings = tempData.items[0].readings;
+            const timestamp = new Date(tempData.items[0].timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                readings: readings,
+                stations: tempData.metadata?.stations || [],
+                footer: createAPIFooter('Air Temperature', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No air temperature data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch air temperature data:', error.message);
+        return { success: false, error: 'Failed to process air temperature data' };
+    }
+}
+
+// Rainfall API Tool
+async function getRainfallData() {
+    console.log('🌧️ Fetching Singapore Rainfall data...');
+    
+    const rainfallData = await fetchData('https://api.data.gov.sg/v1/environment/rainfall');
+    
+    try {
+        if (rainfallData.items && rainfallData.items.length > 0) {
+            const readings = rainfallData.items[0].readings;
+            const timestamp = new Date(rainfallData.items[0].timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                readings: readings,
+                stations: rainfallData.metadata?.stations || [],
+                footer: createAPIFooter('Rainfall', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No rainfall data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch rainfall data:', error.message);
+        return { success: false, error: 'Failed to process rainfall data' };
+    }
+}
+
+// Relative Humidity (v1) API Tool
+async function getRelativeHumidityV1Data() {
+    console.log('💧 Fetching Singapore Relative Humidity (v1) data...');
+    
+    const humidityData = await fetchData('https://api.data.gov.sg/v1/environment/relative-humidity');
+    
+    try {
+        if (humidityData.items && humidityData.items.length > 0) {
+            const readings = humidityData.items[0].readings;
+            const timestamp = new Date(humidityData.items[0].timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                readings: readings,
+                stations: humidityData.metadata?.stations || [],
+                footer: createAPIFooter('Relative Humidity', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No relative humidity data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch relative humidity data:', error.message);
+        return { success: false, error: 'Failed to process relative humidity data' };
+    }
+}
+
+// Wind Direction API Tool
+async function getWindDirectionData() {
+    console.log('🧭 Fetching Singapore Wind Direction data...');
+    
+    const windData = await fetchData('https://api.data.gov.sg/v1/environment/wind-direction');
+    
+    try {
+        if (windData.items && windData.items.length > 0) {
+            const readings = windData.items[0].readings;
+            const timestamp = new Date(windData.items[0].timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                readings: readings,
+                stations: windData.metadata?.stations || [],
+                footer: createAPIFooter('Wind Direction', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No wind direction data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch wind direction data:', error.message);
+        return { success: false, error: 'Failed to process wind direction data' };
+    }
+}
+
+// Wind Speed (v1) API Tool
+async function getWindSpeedV1Data() {
+    console.log('💨 Fetching Singapore Wind Speed (v1) data...');
+    
+    const windData = await fetchData('https://api.data.gov.sg/v1/environment/wind-speed');
+    
+    try {
+        if (windData.items && windData.items.length > 0) {
+            const readings = windData.items[0].readings;
+            const timestamp = new Date(windData.items[0].timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                readings: readings,
+                stations: windData.metadata?.stations || [],
+                footer: createAPIFooter('Wind Speed', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No wind speed data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch wind speed data:', error.message);
+        return { success: false, error: 'Failed to process wind speed data' };
+    }
+}
+
+// UV Index API Tool
+async function getUVIndexData() {
+    console.log('☀️ Fetching Singapore UV Index data...');
+    
+    const uvData = await fetchData('https://api.data.gov.sg/v1/environment/uv-index');
+    
+    try {
+        if (uvData.items && uvData.items.length > 0) {
+            const readings = uvData.items[0].readings;
+            const timestamp = new Date(uvData.items[0].timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                readings: readings,
+                footer: createAPIFooter('UV Index', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No UV index data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch UV index data:', error.message);
+        return { success: false, error: 'Failed to process UV index data' };
+    }
+}
+
+// 2-Hour Weather Forecast (v1) API Tool
+async function get2HourForecastV1Data() {
+    console.log('🌤️ Fetching Singapore 2-Hour Forecast (v1) data...');
+    
+    const forecastData = await fetchData('https://api.data.gov.sg/v1/environment/2-hour-weather-forecast');
+    
+    try {
+        if (forecastData.items && forecastData.items.length > 0) {
+            const forecasts = forecastData.items[0].forecasts;
+            const timestamp = new Date(forecastData.items[0].timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                forecasts: forecasts,
+                footer: createAPIFooter('2-Hour Forecast', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No 2-hour forecast data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch 2-hour forecast data:', error.message);
+        return { success: false, error: 'Failed to process 2-hour forecast data' };
+    }
+}
+
+// 24-Hour Weather Forecast API Tool
+async function get24HourForecastData() {
+    console.log('📅 Fetching Singapore 24-Hour Forecast data...');
+    
+    const forecastData = await fetchData('https://api.data.gov.sg/v1/environment/24-hour-weather-forecast');
+    
+    try {
+        if (forecastData.items && forecastData.items.length > 0) {
+            const forecast = forecastData.items[0];
+            const timestamp = new Date(forecast.timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                forecast: forecast,
+                footer: createAPIFooter('24-Hour Forecast', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No 24-hour forecast data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch 24-hour forecast data:', error.message);
+        return { success: false, error: 'Failed to process 24-hour forecast data' };
+    }
+}
+
+// 4-Day Weather Forecast API Tool
+async function get4DayForecastData() {
+    console.log('📊 Fetching Singapore 4-Day Forecast data...');
+    
+    const forecastData = await fetchData('https://api.data.gov.sg/v1/environment/4-day-weather-forecast');
+    
+    try {
+        if (forecastData.items && forecastData.items.length > 0) {
+            const forecasts = forecastData.items[0].forecasts;
+            const timestamp = new Date(forecastData.items[0].timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                forecasts: forecasts,
+                footer: createAPIFooter('4-Day Forecast', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No 4-day forecast data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch 4-day forecast data:', error.message);
+        return { success: false, error: 'Failed to process 4-day forecast data' };
+    }
+}
+
 // Function to get Weather Uncle's response
 async function getWeatherUncleResponse(userMessage, username) {
     try {
