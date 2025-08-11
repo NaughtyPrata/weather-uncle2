@@ -206,6 +206,77 @@ function createNativeTelegramWeatherCard(allData) {
     return card;
 }
 
+// Traffic Camera Image Sender
+async function sendTrafficCameraImages(chatId, messageId, userMessage) {
+    try {
+        console.log('📸 Fetching traffic camera data for image display...');
+        
+        const trafficData = await getTrafficData();
+        
+        if (!trafficData.success) {
+            await bot.sendMessage(chatId, '❌ Sorry, I couldn\'t fetch traffic camera data right now. Please try again!', {
+                reply_to_message_id: messageId
+            });
+            return;
+        }
+
+        // Filter cameras based on user location request
+        let cameraLocation = null;
+        if (userMessage.toLowerCase().includes('amk') || userMessage.toLowerCase().includes('ang mo kio')) {
+            cameraLocation = 'ang mo kio';
+        }
+        
+        // Get relevant cameras (first 3-5 for better performance)
+        const camerasToShow = trafficData.cameras.slice(0, 3);
+        
+        await bot.sendMessage(chatId, `📸 *SINGAPORE TRAFFIC CAMERAS*\n\n🚗 Showing ${camerasToShow.length} live traffic cameras\n📅 Updated: ${trafficData.timestamp}`, {
+            parse_mode: 'Markdown',
+            reply_to_message_id: messageId
+        });
+
+        // Send camera images with larger display settings
+        for (const camera of camerasToShow) {
+            try {
+                await bot.sendPhoto(chatId, camera.image, {
+                    caption: `📷 *Camera ${camera.id}*\n📍 Location: ${camera.location}\n🕐 ${camera.imageTime}`,
+                    parse_mode: 'Markdown',
+                    reply_to_message_id: messageId,
+                    // Settings for larger image display
+                    supports_streaming: true,
+                    has_spoiler: false
+                });
+                
+                console.log(`✅ Sent traffic camera image: ${camera.id}`);
+                
+                // Small delay to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+            } catch (imageError) {
+                console.error(`❌ Failed to send camera ${camera.id}:`, imageError.message);
+                
+                // Send fallback message with image URL
+                await bot.sendMessage(chatId, `📷 Camera ${camera.id} - ${camera.location}\n🔗 Image: ${camera.image}`, {
+                    reply_to_message_id: messageId
+                });
+            }
+        }
+
+        // Add API footer
+        await bot.sendMessage(chatId, trafficData.footer, {
+            parse_mode: 'Markdown',
+            reply_to_message_id: messageId
+        });
+
+        console.log('✅ Traffic camera images sent successfully');
+
+    } catch (error) {
+        console.error('❌ Error sending traffic camera images:', error.message);
+        await bot.sendMessage(chatId, '❌ Sorry, I encountered an error getting traffic camera images. Please try again!', {
+            reply_to_message_id: messageId
+        });
+    }
+}
+
 // Weather Dashboard Generator
 async function generateWeatherDashboard(chatId, messageId = null) {
     try {
@@ -1060,6 +1131,15 @@ bot.on('message', async (msg) => {
             
             console.log('🎛️ Dashboard command detected! Generating weather dashboard UI card...');
             await generateWeatherDashboard(chatId, msg.message_id);
+            return;
+        }
+
+        // Check for traffic camera image requests
+        if (userMessage.toLowerCase().includes('show') && 
+            (userMessage.toLowerCase().includes('traffic') || userMessage.toLowerCase().includes('camera'))) {
+            
+            console.log('📸 Traffic camera image request detected! Fetching and sending traffic images...');
+            await sendTrafficCameraImages(chatId, msg.message_id, userMessage);
             return;
         }
 
