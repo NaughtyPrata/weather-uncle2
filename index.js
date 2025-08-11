@@ -48,13 +48,13 @@ function createAPIFooter(apiName, timestamp, dataSource) {
 }
 
 // Helper function to create comprehensive API footer
-function createComprehensiveAPIFooter(apiList, timestamp) {
+function createNativeTelegramAPIFooter(apiList, timestamp) {
     if (apiList.length === 0) return '';
     
     const uniqueAPIs = [...new Set(apiList)]; // Remove duplicates
     const plural = uniqueAPIs.length > 1 ? 'APIs' : 'API';
     
-    return `\n\n📊 *Live data from ${uniqueAPIs.length} Singapore Government ${plural}: ${uniqueAPIs.join(', ')} (${timestamp})*`;
+    return `\n<b>📊 Live data from ${uniqueAPIs.length} Singapore Government ${plural}:</b>\n<i>${uniqueAPIs.join(', ')}</i>\n<code>Updated: ${timestamp}</code>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -167,33 +167,41 @@ function getUVStatus(uv) {
     return '🟣 Extreme';
 }
 
-function createComprehensiveWeatherCard(allData) {
+function createNativeTelegramWeatherCard(allData) {
     const timestamp = new Date().toLocaleString('en-SG');
     
-    let card = `🌤️ *SINGAPORE WEATHER DASHBOARD*\n`;
-    card += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    card += `📅 ${timestamp}\n\n`;
+    // Create native Telegram HTML card format with rich structure
+    let card = `<b>🌤️ SINGAPORE WEATHER DASHBOARD</b>\n`;
+    card += `<i>📅 ${timestamp}</i>\n\n`;
     
-    // Environmental Data
-    card += `🌡️ *ENVIRONMENTAL CONDITIONS*\n`;
-    card += `├ Temperature: ${allData.temperature || 'N/A'}°C\n`;
-    card += `├ Humidity: ${allData.humidity || 'N/A'}%\n`;
-    card += `├ Wind Speed: ${allData.windSpeed || 'N/A'} km/h\n`;
-    card += `└ Rainfall: ${allData.rainfall || 0}mm\n\n`;
+    // Environmental section with native formatting
+    card += `<b>🌡️ ENVIRONMENTAL CONDITIONS</b>\n`;
+    card += `<code>Temperature: ${allData.temperature || 'N/A'}°C</code>\n`;
+    card += `<code>Humidity: ${allData.humidity || 'N/A'}%</code>\n`;
+    card += `<code>Wind Speed: ${allData.windSpeed || 'N/A'} km/h</code>\n`;
+    card += `<code>Rainfall: ${allData.rainfall || 0}mm</code>\n\n`;
     
-    // Air Quality
-    card += createAirQualityCard(allData.psi, allData.pm25, allData.uvIndex);
+    // Air quality with native formatting and emojis
+    card += `<b>🌫️ AIR QUALITY INDEX</b>\n`;
+    const psiStatus = getPSIStatus(allData.psi);
+    card += `<code>PSI: ${allData.psi || 'N/A'} ${psiStatus}</code>\n`;
+    if (allData.pm25) card += `<code>PM2.5: ${allData.pm25} μg/m³</code>\n`;
+    const uvStatus = getUVStatus(allData.uvIndex);
+    card += `<code>UV Index: ${allData.uvIndex || 'N/A'} ${uvStatus}</code>\n\n`;
     
-    // Forecasts
+    // Safety check with native formatting
+    card += `<b>🛡️ QUICK SAFETY CHECK</b>\n`;
+    const outdoorSafe = !(allData.psi > 100 || allData.uvIndex > 8 || allData.rainfall > 5);
+    card += `<code>Outdoor Safety: ${outdoorSafe ? '✅ Safe' : '❌ Use Caution'}</code>\n`;
+    card += `<code>Air Quality: ${allData.psi <= 100 ? '✅ Good' : '❌ Poor'}</code>\n`;
+    card += `<code>UV Protection: ${allData.uvIndex <= 7 ? '✅ Optional' : '❌ Required'}</code>\n\n`;
+    
+    // Forecast section if available
     if (allData.forecast2h || allData.forecast24h) {
-        card += createForecastCard(allData.forecast2h, allData.forecast24h);
+        card += `<b>📊 WEATHER FORECASTS</b>\n`;
+        if (allData.forecast2h) card += `<i>2-Hour: ${allData.forecast2h}</i>\n`;
+        if (allData.forecast24h) card += `<i>24-Hour: ${allData.forecast24h}</i>\n\n`;
     }
-    
-    // Quick Safety Summary
-    card += `🛡️ *QUICK SAFETY CHECK*\n`;
-    card += `├ Outdoor Safety: ${allData.psi > 100 || allData.uvIndex > 8 || allData.rainfall > 5 ? '❌ Use Caution' : '✅ Safe'}\n`;
-    card += `├ Air Quality: ${allData.psi > 100 ? '❌ Poor' : '✅ Good'}\n`;
-    card += `└ UV Protection: ${allData.uvIndex > 7 ? '❌ Required' : '✅ Optional'}\n\n`;
     
     return card;
 }
@@ -216,23 +224,29 @@ async function generateWeatherDashboard(chatId, messageId = null) {
             get24HourForecastData()
         ]);
         
-        // Compile all data
+        // Compile all data with safe extraction
         const allData = {
-            psi: psiData.success ? Math.max(...(psiData.readings?.map(r => r.value) || [0])) : null,
-            uvIndex: uvData.success ? Math.max(...(uvData.readings?.map(r => r.value) || [0])) : null,
-            rainfall: rainfallData.success ? Math.max(...(rainfallData.readings?.map(r => r.value) || [0])) : null,
-            humidity: humidityData.success ? Math.max(...(humidityData.readings?.map(r => r.value) || [0])) : null,
-            windSpeed: windData.success ? Math.max(...(windData.readings?.map(r => r.value) || [0])) : null,
-            temperature: tempData.success ? Math.max(...(tempData.readings?.map(r => r.value) || [0])) : null,
+            psi: psiData.success && psiData.readings?.length > 0 ? 
+                Math.max(...psiData.readings.map(r => r.value)) : null,
+            uvIndex: uvData.success && uvData.readings?.length > 0 ? 
+                Math.max(...uvData.readings.map(r => r.value)) : null,
+            rainfall: rainfallData.success && rainfallData.readings?.length > 0 ? 
+                Math.max(...rainfallData.readings.map(r => r.value)) : null,
+            humidity: humidityData.success && humidityData.readings?.length > 0 ? 
+                Math.max(...humidityData.readings.map(r => r.value)) : null,
+            windSpeed: windData.success && windData.readings?.length > 0 ? 
+                Math.max(...windData.readings.map(r => r.value)) : null,
+            temperature: tempData.success && tempData.readings?.length > 0 ? 
+                Math.max(...tempData.readings.map(r => r.value)) : null,
             forecast2h: forecast2hData.success && forecast2hData.forecasts?.length > 0 ? 
                 forecast2hData.forecasts[0].forecast : null,
-            forecast24h: forecast24hData.success && forecast24hData.general?.forecast ? 
-                forecast24hData.general.forecast : null,
-            pm25: null // We can add PM2.5 if needed
+            forecast24h: forecast24hData.success && forecast24hData.forecast ? 
+                forecast24hData.forecast.forecast : null,
+            pm25: null
         };
         
-        // Generate comprehensive weather card
-        const dashboardCard = createComprehensiveWeatherCard(allData);
+        // Generate native Telegram weather card
+        const dashboardCard = createNativeTelegramWeatherCard(allData);
         
         // Create interactive keyboard
         const keyboard = createInteractiveKeyboard();
@@ -240,15 +254,22 @@ async function generateWeatherDashboard(chatId, messageId = null) {
         // Track APIs used
         const usedAPIs = ['PSI API', 'UV Index API', 'Rainfall API', 'Humidity API', 'Wind Speed API', 'Air Temperature API', '2-Hour Forecast API', '24-Hour Forecast API'];
         const timestamp = new Date().toLocaleString('en-SG');
-        const footer = createComprehensiveAPIFooter(usedAPIs, timestamp);
+        const footer = createNativeTelegramAPIFooter(usedAPIs, timestamp);
         
         const fullMessage = dashboardCard + footer;
         
-        // Send dashboard with interactive keyboard
+        // Send dashboard as native Telegram card with rich preview
         await bot.sendMessage(chatId, fullMessage, {
-            parse_mode: 'Markdown',
+            parse_mode: 'HTML',
             reply_markup: keyboard,
-            reply_to_message_id: messageId
+            reply_to_message_id: messageId,
+            disable_web_page_preview: false,
+            link_preview_options: {
+                is_disabled: false,
+                prefer_small_media: false,
+                prefer_large_media: true,
+                show_above_text: true
+            }
         });
         
         console.log('✅ Weather dashboard sent successfully');
@@ -706,16 +727,16 @@ async function getWindSpeedV1Data() {
     }
 }
 
-// UV Index API Tool
+// UV Index API Tool (v2)
 async function getUVIndexData() {
     console.log('☀️ Fetching Singapore UV Index data...');
     
-    const uvData = await fetchData('https://api.data.gov.sg/v1/environment/uv-index');
+    const uvData = await fetchData('https://api-open.data.gov.sg/v2/real-time/api/uv');
     
     try {
-        if (uvData.items && uvData.items.length > 0) {
-            const readings = uvData.items[0].readings;
-            const timestamp = new Date(uvData.items[0].timestamp).toLocaleString('en-SG');
+        if (uvData.data && uvData.data.readings && uvData.data.readings.length > 0) {
+            const readings = uvData.data.readings;
+            const timestamp = new Date(uvData.data.timestamp).toLocaleString('en-SG');
             
             return {
                 success: true,
@@ -729,6 +750,136 @@ async function getUVIndexData() {
     } catch (error) {
         console.error('❌ Failed to fetch UV index data:', error.message);
         return { success: false, error: 'Failed to process UV index data' };
+    }
+}
+
+// Temperature API Tool (v2)
+async function getTemperatureData() {
+    console.log('🌡️ Fetching Singapore Temperature data...');
+    
+    const tempData = await fetchData('https://api-open.data.gov.sg/v2/real-time/api/air-temperature');
+    
+    try {
+        if (tempData.data && tempData.data.readings && tempData.data.readings.length > 0) {
+            const readings = tempData.data.readings;
+            const timestamp = new Date(tempData.data.timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                readings: readings,
+                footer: createAPIFooter('Air Temperature', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No temperature data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch temperature data:', error.message);
+        return { success: false, error: 'Failed to process temperature data' };
+    }
+}
+
+// Humidity API Tool (v2)
+async function getHumidityData() {
+    console.log('💧 Fetching Singapore Humidity data...');
+    
+    const humidityData = await fetchData('https://api-open.data.gov.sg/v2/real-time/api/relative-humidity');
+    
+    try {
+        if (humidityData.data && humidityData.data.readings && humidityData.data.readings.length > 0) {
+            const readings = humidityData.data.readings;
+            const timestamp = new Date(humidityData.data.timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                readings: readings,
+                footer: createAPIFooter('Relative Humidity', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No humidity data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch humidity data:', error.message);
+        return { success: false, error: 'Failed to process humidity data' };
+    }
+}
+
+// Wind Speed API Tool (v2)
+async function getWindSpeedData() {
+    console.log('💨 Fetching Singapore Wind Speed data...');
+    
+    const windData = await fetchData('https://api-open.data.gov.sg/v2/real-time/api/wind-speed');
+    
+    try {
+        if (windData.data && windData.data.readings && windData.data.readings.length > 0) {
+            const readings = windData.data.readings;
+            const timestamp = new Date(windData.data.timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                readings: readings,
+                footer: createAPIFooter('Wind Speed', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No wind speed data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch wind speed data:', error.message);
+        return { success: false, error: 'Failed to process wind speed data' };
+    }
+}
+
+// Rainfall API Tool (v2)
+async function getRainfallData() {
+    console.log('🌧️ Fetching Singapore Rainfall data...');
+    
+    const rainfallData = await fetchData('https://api-open.data.gov.sg/v2/real-time/api/rainfall');
+    
+    try {
+        if (rainfallData.data && rainfallData.data.readings && rainfallData.data.readings.length > 0) {
+            const readings = rainfallData.data.readings;
+            const timestamp = new Date(rainfallData.data.timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                readings: readings,
+                footer: createAPIFooter('Rainfall', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No rainfall data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch rainfall data:', error.message);
+        return { success: false, error: 'Failed to process rainfall data' };
+    }
+}
+
+// 2-Hour Forecast API Tool (v2)
+async function get2HourForecastData() {
+    console.log('🌤️ Fetching Singapore 2-Hour Forecast data...');
+    
+    const forecastData = await fetchData('https://api-open.data.gov.sg/v2/real-time/api/two-hr-forecast');
+    
+    try {
+        if (forecastData.data && forecastData.data.forecasts && forecastData.data.forecasts.length > 0) {
+            const forecasts = forecastData.data.forecasts;
+            const timestamp = new Date(forecastData.data.timestamp).toLocaleString('en-SG');
+            
+            return {
+                success: true,
+                timestamp: timestamp,
+                forecasts: forecasts,
+                footer: createAPIFooter('2-Hour Forecast', timestamp, 'Singapore Environment APIs')
+            };
+        } else {
+            throw new Error('No 2-hour forecast data available');
+        }
+    } catch (error) {
+        console.error('❌ Failed to fetch 2-hour forecast data:', error.message);
+        return { success: false, error: 'Failed to process 2-hour forecast data' };
     }
 }
 
